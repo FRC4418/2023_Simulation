@@ -4,6 +4,11 @@
 
 package frc.robot;
 
+import com.ctre.phoenix.motorcontrol.ControlMode;
+import com.ctre.phoenix.motorcontrol.DemandType;
+import com.stuypulse.stuylib.input.gamepads.AutoGamepad;
+
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
@@ -18,6 +23,7 @@ public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
 
   private RobotContainer m_robotContainer;
+  private AutoGamepad driver = new AutoGamepad(0);
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -81,7 +87,13 @@ public class Robot extends TimedRobot {
 
   /** This function is called periodically during operator control. */
   @Override
-  public void teleopPeriodic() {}
+  public void teleopPeriodic() {
+    double throttle = driver.getLeftX();
+    double turn = driver.getLeftY();
+
+    m_robotContainer.driveSubsystem.leftFrontMotor.set(ControlMode.PercentOutput, throttle, DemandType.ArbitraryFeedForward, turn);
+    m_robotContainer.driveSubsystem.rightFrontMotor.set(ControlMode.PercentOutput, throttle, DemandType.ArbitraryFeedForward, -turn);
+  }
 
   @Override
   public void testInit() {
@@ -99,5 +111,22 @@ public class Robot extends TimedRobot {
 
   /** This function is called periodically whilst in simulation. */
   @Override
-  public void simulationPeriodic() {}
+  public void simulationPeriodic() {
+    m_robotContainer.driveSubsystem.leftDriveSim.setBusVoltage(RobotController.getBatteryVoltage());
+    m_robotContainer.driveSubsystem.rightDriveSim.setBusVoltage(RobotController.getBatteryVoltage());
+
+    m_robotContainer.driveSubsystem.m_drivetrainSimulator.setInputs(
+      m_robotContainer.driveSubsystem.leftDriveSim.getMotorOutputLeadVoltage(), 
+      m_robotContainer.driveSubsystem.rightDriveSim.getMotorOutputLeadVoltage());
+
+      m_robotContainer.driveSubsystem.m_drivetrainSimulator.update(0.02);
+
+      m_robotContainer.driveSubsystem.leftDriveSim.setIntegratedSensorRawPosition((int)m_robotContainer.driveSubsystem.nativeUnitsToDistanceMeters(m_robotContainer.driveSubsystem.m_drivetrainSimulator.getLeftPositionMeters()));
+      m_robotContainer.driveSubsystem.rightDriveSim.setIntegratedSensorRawPosition((int)m_robotContainer.driveSubsystem.nativeUnitsToDistanceMeters(m_robotContainer.driveSubsystem.m_drivetrainSimulator.getRightPositionMeters()));
+      
+      m_robotContainer.driveSubsystem.leftDriveSim.setIntegratedSensorVelocity((int)m_robotContainer.driveSubsystem.velocityToNativeUnits(m_robotContainer.driveSubsystem.m_drivetrainSimulator.getLeftVelocityMetersPerSecond()));
+      m_robotContainer.driveSubsystem.rightDriveSim.setIntegratedSensorVelocity((int)m_robotContainer.driveSubsystem.velocityToNativeUnits(m_robotContainer.driveSubsystem.m_drivetrainSimulator.getRightVelocityMetersPerSecond()));
+      
+      m_robotContainer.driveSubsystem.gyroSim.setAngle(m_robotContainer.driveSubsystem.m_drivetrainSimulator.getHeading().getDegrees());
+    }
 }
